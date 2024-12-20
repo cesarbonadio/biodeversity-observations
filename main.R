@@ -9,13 +9,13 @@ library(lubridate)
 library(plotly)
 
 input_file <- "data/occurence.csv"
-output_file <- "data/poland_observations_2.csv"
+output_file <- "data/poland_observations.csv"
 
 
 if (!file.exists(output_file)) {
   process_chunk <- function(chunk, pos) {
     chunk <- chunk[
-      chunk$country == 'Poland' | chunk$country == 'Venezuela', ]
+      chunk$country == 'Poland', ]
     return(chunk)
   }
   filtered_data <- read_csv_chunked(
