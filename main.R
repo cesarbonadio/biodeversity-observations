@@ -9,6 +9,7 @@ library(lubridate)
 library(plotly)
 
 input_file <- "data/occurence.csv"
+input_file_multimedia <- "data/multimedia.csv"
 output_file <- "data/poland_observations.csv"
 
 
@@ -23,7 +24,12 @@ if (!file.exists(output_file)) {
     callback = DataFrameCallback$new(process_chunk),
     chunk_size = 10000
   )
-  write_csv(filtered_data, output_file)
+  multimedia_data <- read_csv(input_file_multimedia, col_types = cols(
+    CoreId = col_character(),
+    accessURI = col_character()
+  ))
+  merged_data <- filtered_data %>% left_join(multimedia_data, by = c("id" = "CoreId"))
+  write_csv(merged_data, output_file)
   message("Preprocessing completed!")
 } else {
   message("Preprocessed file already exists.")
@@ -38,10 +44,12 @@ ui <- fluidPage(
       fileInput("file", "Upload CSV File", accept = c(".csv"),placeholder = "Choose a CSV file"),
       conditionalPanel(
         condition = "input.tab == 'Map'",
-        textInput("scientific_search", "Search by Scientific Name", placeholder = "Enter scientific name"),
-        textInput("vernacular_search", "Search by Vernacular Name", placeholder = "Enter vernacular name"),
+        uiOutput("scientific_search"),
+        uiOutput("vernacular_search"),
         uiOutput("sex_selector"),
-        uiOutput("kingdom_selector")
+        uiOutput("kingdom_selector"),
+        uiOutput("has_image_sele"),
+        checkboxInput("filter_images", "Show Only Observations with Images", value = FALSE)
       ),
       conditionalPanel(
           condition = "input.tab == 'Map'",
@@ -104,6 +112,16 @@ server <- function(input, output, session) {
       filter(!is.na(event_datetime))
     df
   })
+
+  output$vernacular_search <- renderUI ({
+    req(data())
+    textInput("vernacular_search", "Search by Vernacular Name", placeholder = "Enter vernacular name")
+  })
+
+  output$scientific_search <- renderUI ({
+    req(data())
+    textInput("scientific_search", "Search by Scientific Name", placeholder = "Enter scientific name")
+  })
   
   output$kingdom_selector <- renderUI ({
     req(data())
@@ -131,7 +149,6 @@ server <- function(input, output, session) {
   
   output$map_overlay <- renderUI({
     if (is.null(filtered_data())) {
-      # Show overlay if data is not yet loaded
       div(
         "Please upload a file to view the map.",
         style = "
@@ -151,7 +168,6 @@ server <- function(input, output, session) {
       "
       )
     } else {
-      # No overlay when data is available
       NULL
     }
   })
@@ -209,6 +225,9 @@ server <- function(input, output, session) {
         df <- df[df$kingdom == input$kingdom, ] 
       }
     }
+    if (input$filter_images) {
+      df <- df[!is.na(df$accessURI), ]
+    }
     filtered_data(df)
   })
   
@@ -227,12 +246,11 @@ server <- function(input, output, session) {
       addTiles() %>%  # Add default OpenStreetMap tiles
       setView(lng = 19.1451, lat = 51.9194, zoom = 6)  # Center on Poland
   })
-  
-  # Add points to the map when data is uploaded
+
   observe({
-    req(filtered_data())  # Ensure data is loaded
+    req(filtered_data())
     leafletProxy("map", data = filtered_data()) %>% 
-      clearMarkers() %>%  # Clear previous markers
+      clearMarkers() %>%
       addCircleMarkers(
         ~longitudeDecimal, ~latitudeDecimal,
         popup = ~paste(
@@ -245,7 +263,8 @@ server <- function(input, output, session) {
             "<br><b>Sex: </b>",
             sex,
             "<br><b>Kingdom: </b>",
-            kingdom
+            kingdom,
+            ifelse(!is.na(accessURI),paste0("<br><img src='", accessURI, "' style='width:250px;height:auto;'/>"),"<br>No image available</br>")
         ),
         radius = 6,
         color = "blue",
