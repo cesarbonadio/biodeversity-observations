@@ -2,6 +2,8 @@
 
 Welcome to the **Poland Species Observation Viewer**, a Shiny web application designed to visualize species observation data on a map and a timeline. This app allows you to filter observations by various attributes such as scientific name, vernacular name, sex, and kingdom. It also supports selecting and processing specific countries before launching the app.
 
+[You can download the initial data here](https://drive.google.com/file/d/1l1ymMg-K_xLriFv1b8MgddH851d6n2sU/view?usp=sharing)
+
 ---
 
 ## Features
