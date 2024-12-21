@@ -13,12 +13,12 @@ source("server.R")
 
 input_file <- "data/occurence.csv"
 input_file_multimedia <- "data/multimedia.csv"
-output_file <- "data/brasil_observations.csv"
+output_file <- "data/poland_observations.csv"
 
 if (!file.exists(output_file)) {
   process_chunk <- function(chunk, pos) {
     chunk <- chunk[
-      chunk$country == 'Brazil', ]
+      chunk$country == 'Poland', ]
     return(chunk)
   }
   filtered_data <- read_csv_chunked(
